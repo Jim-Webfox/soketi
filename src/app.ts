@@ -168,6 +168,11 @@ export class App implements AppInterface {
     /**
      * @type {boolean}
      */
+    public hasSubscriptionCountWebhooks = false;
+
+    /**
+     * @type {boolean}
+     */
     public hasCacheMissedWebhooks = false;
 
     static readonly CLIENT_EVENT_WEBHOOK = 'client_event';
@@ -205,6 +210,7 @@ export class App implements AppInterface {
         this.hasChannelVacatedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CHANNEL_VACATED_WEBHOOK)).length > 0;
         this.hasMemberAddedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.MEMBER_ADDED_WEBHOOK)).length > 0;
         this.hasMemberRemovedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.MEMBER_REMOVED_WEBHOOK)).length > 0;
+        this.hasSubscriptionCountWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.SUBSCRIPTION_COUNT_WEBHOOK)).length > 0;
         this.hasCacheMissedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CACHE_MISSED_WEBHOOK)).length > 0;
     }
 

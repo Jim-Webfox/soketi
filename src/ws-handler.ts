@@ -388,6 +388,8 @@ export class WsHandler {
                 this.server.webhookSender.sendChannelOccupied(ws.app, channel);
             }
 
+            this.server.webhookSender.sendSubscriptionCount(ws.app, channel);
+
             // For non-presence channels, end with subscription succeeded.
             if (!(channelManager instanceof PresenceChannelManager)) {
                 let broadcastMessage = {
@@ -506,6 +508,8 @@ export class WsHandler {
                 if (response.remainingConnections === 0) {
                     this.server.webhookSender.sendChannelVacated(ws.app, channel);
                 }
+
+                this.server.webhookSender.sendSubscriptionCount(ws.app, channel);
             }
 
             // ws.send(JSON.stringify({
