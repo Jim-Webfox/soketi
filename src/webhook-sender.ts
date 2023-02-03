@@ -231,6 +231,7 @@ export class WebhookSender {
             user_id: userId,
         }, 'member_removed_webhooks');
     }
+
     /**
      * Send a channel_vacated event.
      */
