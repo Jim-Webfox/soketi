@@ -388,8 +388,6 @@ export class WsHandler {
                 this.server.webhookSender.sendChannelOccupied(ws.app, channel);
             }
 
-            this.server.webhookSender.sendSubscriptionCount(ws.app, channel);
-
             // For non-presence channels, end with subscription succeeded.
             if (!(channelManager instanceof PresenceChannelManager)) {
                 let broadcastMessage = {
@@ -398,6 +396,17 @@ export class WsHandler {
                 };
 
                 ws.sendJson(broadcastMessage);
+
+                if (ws.app.enableSubscriptionCountEvent) {
+                    let subscriptionCountMessage = {
+                        event: 'pusher_internal:subscription_count',
+                        channel,
+                        subscription_count: ws.app.getChannelSockets(channel).length,
+                    };
+
+                    ws.sendJson(subscriptionCountMessage);
+                }
+
 
                 if (Utils.isCachingChannel(channel)) {
                     this.sendMissedCacheIfExists(ws, channel);
@@ -509,13 +518,22 @@ export class WsHandler {
                     this.server.webhookSender.sendChannelVacated(ws.app, channel);
                 }
 
-                this.server.webhookSender.sendSubscriptionCount(ws.app, channel);
             }
 
             // ws.send(JSON.stringify({
             //     event: 'pusher_internal:unsubscribed',
             //     channel,
             // }));
+
+            if (ws.app.enableSubscriptionCountEvent) {
+                let subscriptionCountMessage = {
+                    event: 'pusher_internal:subscription_count',
+                    channel,
+                    subscription_count: ws.app.getChannelSockets(channel).length,
+                };
+
+                ws.sendJson(subscriptionCountMessage);
+            }
 
             return;
         });

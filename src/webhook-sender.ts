@@ -170,7 +170,6 @@ export class WebhookSender {
             server.queueManager.processQueue('client_event_webhooks', queueProcessor);
             server.queueManager.processQueue('member_added_webhooks', queueProcessor);
             server.queueManager.processQueue('member_removed_webhooks', queueProcessor);
-            server.queueManager.processQueue('subscription_count_webhooks', queueProcessor);
             server.queueManager.processQueue('channel_vacated_webhooks', queueProcessor);
             server.queueManager.processQueue('channel_occupied_webhooks', queueProcessor);
             server.queueManager.processQueue('cache_miss_webhooks', queueProcessor);
@@ -231,16 +230,6 @@ export class WebhookSender {
             channel,
             user_id: userId,
         }, 'member_removed_webhooks');
-    }
-    sendSubscriptionCount(app, channel) {
-        if (!app.hasSubscriptionCountWebhooks) {
-            return;
-        }
-        this.send(app, {
-            name: App.SUBSCRIPTION_COUNT_WEBHOOK,
-            channel,
-            subscription_count: app.getChannelSockets(channel).length,
-        }, 'subscription_count_webhooks');
     }
     /**
      * Send a channel_vacated event.

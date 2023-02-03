@@ -168,7 +168,7 @@ export class App implements AppInterface {
     /**
      * @type {boolean}
      */
-    public hasSubscriptionCountWebhooks = false;
+    public enableSubscriptionCountEvent = false;
 
     /**
      * @type {boolean}
@@ -204,13 +204,14 @@ export class App implements AppInterface {
         this.maxEventPayloadInKb = parseFloat(this.extractFromPassedKeys(initialApp, ['maxEventPayloadInKb', 'MaxEventPayloadInKb', 'max_event_payload_in_kb'], server.options.eventLimits.maxPayloadInKb));
         this.maxEventBatchSize = parseInt(this.extractFromPassedKeys(initialApp, ['maxEventBatchSize', 'MaxEventBatchSize', 'max_event_batch_size'], server.options.eventLimits.maxBatchSize));
         this.enableUserAuthentication = this.extractFromPassedKeys(initialApp, ['enableUserAuthentication', 'EnableUserAuthentication', 'enable_user_authentication'], false);
+        this.enableSubscriptionCountEvent = this.extractFromPassedKeys(initialApp, ['enableSubscriptionCount', 'enable_subscription_count'], false);
+
 
         this.hasClientEventWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CLIENT_EVENT_WEBHOOK)).length > 0;
         this.hasChannelOccupiedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CHANNEL_OCCUPIED_WEBHOOK)).length > 0;
         this.hasChannelVacatedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CHANNEL_VACATED_WEBHOOK)).length > 0;
         this.hasMemberAddedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.MEMBER_ADDED_WEBHOOK)).length > 0;
         this.hasMemberRemovedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.MEMBER_REMOVED_WEBHOOK)).length > 0;
-        this.hasSubscriptionCountWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.SUBSCRIPTION_COUNT_WEBHOOK)).length > 0;
         this.hasCacheMissedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CACHE_MISSED_WEBHOOK)).length > 0;
     }
 
