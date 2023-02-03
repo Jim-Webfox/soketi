@@ -1,20 +1,24 @@
-import { App } from './app';
+import {App} from './app';
 import async from 'async';
-import { EncryptedPrivateChannelManager } from './channels';
-import { HttpRequest, HttpResponse } from 'uWebSockets.js';
-import { Log } from './log';
-import { Namespace } from './namespace';
-import { PresenceChannelManager } from './channels';
-import { PresenceMemberInfo } from './channels/presence-channel-manager';
-import { PrivateChannelManager } from './channels';
-import { PublicChannelManager } from './channels';
-import { PusherMessage, uWebSocketMessage } from './message';
-import { Server } from './server';
-import { Utils } from './utils';
-import { WebSocket } from 'uWebSockets.js';
+import {EncryptedPrivateChannelManager} from './channels';
+import {HttpRequest, HttpResponse} from 'uWebSockets.js';
+import {Log} from './log';
+import {Namespace} from './namespace';
+import {PresenceChannelManager} from './channels';
+import {PresenceMemberInfo} from './channels/presence-channel-manager';
+import {PrivateChannelManager} from './channels';
+import {PublicChannelManager} from './channels';
+import {PusherMessage, uWebSocketMessage} from './message';
+import {Server} from './server';
+import {Utils} from './utils';
+import {WebSocket} from 'uWebSockets.js';
 
 const ab2str = require('arraybuffer-to-string');
 const Pusher = require('pusher');
+
+export interface ChannelTimestampsMap {
+    [key: string]: NodeJS.Timeout,
+}
 
 export class WsHandler {
     /**
@@ -38,6 +42,11 @@ export class WsHandler {
     protected presenceChannelManager: PresenceChannelManager;
 
     /**
+     * The object for mapping timestamps of last join on a channel
+     */
+    protected channelTimestamps: ChannelTimestampsMap;
+
+    /**
      * Initialize the Websocket connections handler.
      */
     constructor(protected server: Server) {
@@ -45,6 +54,7 @@ export class WsHandler {
         this.privateChannelManager = new PrivateChannelManager(server);
         this.encryptedPrivateChannelManager = new EncryptedPrivateChannelManager(server);
         this.presenceChannelManager = new PresenceChannelManager(server);
+        this.channelTimestamps = {};
     }
 
     /**
@@ -53,7 +63,7 @@ export class WsHandler {
     onOpen(ws: WebSocket): any {
         if (this.server.options.debug) {
             Log.websocketTitle('👨‍🔬 New connection:');
-            Log.websocket({ ws });
+            Log.websocket({ws});
         }
 
         ws.sendJson = (data) => {
@@ -68,7 +78,7 @@ export class WsHandler {
 
                 if (this.server.options.debug) {
                     Log.websocketTitle('✈ Sent message to client:');
-                    Log.websocket({ ws, data });
+                    Log.websocket({ws, data});
                 }
             } catch (e) {
                 //
@@ -169,7 +179,7 @@ export class WsHandler {
 
         if (this.server.options.debug) {
             Log.websocketTitle('⚡ New message received:');
-            Log.websocket({ message, isBinary });
+            Log.websocket({message, isBinary});
         }
 
         if (message) {
@@ -202,7 +212,7 @@ export class WsHandler {
     onClose(ws: WebSocket, code: number, message: uWebSocketMessage): any {
         if (this.server.options.debug) {
             Log.websocketTitle('❌ Connection closed:');
-            Log.websocket({ ws, code, message });
+            Log.websocket({ws, code, message});
         }
 
         // If code 4200 (reconnect immediately) is called, it means the `closeAllLocalSockets()` was called.
@@ -349,7 +359,7 @@ export class WsHandler {
 
         channelManager.join(ws, channel, message).then((response) => {
             if (!response.success) {
-                let { authError, type, errorMessage, errorCode } = response;
+                let {authError, type, errorMessage, errorCode} = response;
 
                 // For auth errors, send pusher:subscription_error
                 if (authError) {
@@ -389,15 +399,42 @@ export class WsHandler {
             }
 
             if (ws.app.enableSubscriptionCountEvent) {
-                let subscriptionCountMessage = {
-                    event: 'pusher_internal:subscription_count',
-                    channel,
-                    data: JSON.stringify({
-                        subscription_count: response?.channelConnections ?? 1,
-                    })
-                };
 
-                this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+                if (!(channel in this.channelTimestamps)) {
+
+                    if (response?.channelConnections > 100) {
+                        this.channelTimestamps[channel] = setTimeout(() => {
+
+                            const userCount = this.server.adapter.getChannelSocketsCount(ws.app.id, channel);
+
+                            let subscriptionCountMessage = {
+                                event: 'pusher_internal:subscription_count',
+                                channel,
+                                data: JSON.stringify({
+                                    subscription_count: userCount,
+                                })
+                            };
+
+                            this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+
+                            delete this.channelTimestamps[channel];
+
+                        }, 30000)
+                    }
+
+
+                    let subscriptionCountMessage = {
+                        event: 'pusher_internal:subscription_count',
+                        channel,
+                        data: JSON.stringify({
+                            subscription_count: response?.channelConnections ?? 1,
+                        })
+                    };
+
+                    this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+                }
+
+
             }
 
             // For non-presence channels, end with subscription succeeded.
@@ -421,7 +458,7 @@ export class WsHandler {
 
             // Otherwise, prepare a response for the presence channel.
             this.server.adapter.getChannelMembers(ws.app.id, channel, false).then(members => {
-                let { user_id, user_info } = response.member;
+                let {user_id, user_info} = response.member;
 
                 ws.presence.set(channel, response.member);
 
@@ -567,7 +604,7 @@ export class WsHandler {
      * Handle the events coming from the client.
      */
     handleClientEvent(ws: WebSocket, message: PusherMessage): any {
-        let { event, data, channel } = message;
+        let {event, data, channel} = message;
 
         if (!ws.app.enableClientMessages) {
             return ws.sendJson({
@@ -627,7 +664,7 @@ export class WsHandler {
                         event,
                         channel,
                         data,
-                        ...userId ? { user_id: userId } : {},
+                        ...userId ? {user_id: userId} : {},
                     });
 
                     this.server.adapter.send(ws.app.id, channel, message, ws.id);
@@ -726,7 +763,7 @@ export class WsHandler {
     sendMissedCacheIfExists(ws: WebSocket, channel: string) {
         this.server.cacheManager.get(`app:${ws.app.id}:channel:${channel}:cache_miss`).then(cachedEvent => {
             if (cachedEvent) {
-                ws.sendJson({ event: 'pusher:cache_miss', channel, data: cachedEvent });
+                ws.sendJson({event: 'pusher:cache_miss', channel, data: cachedEvent});
             } else {
                 this.server.webhookSender.sendCacheMissed(ws.app, channel);
             }
@@ -737,7 +774,7 @@ export class WsHandler {
      * Get the channel manager for the given channel name,
      * respecting the Pusher protocol.
      */
-    getChannelManagerFor(channel: string): PublicChannelManager|PrivateChannelManager|EncryptedPrivateChannelManager|PresenceChannelManager {
+    getChannelManagerFor(channel: string): PublicChannelManager | PrivateChannelManager | EncryptedPrivateChannelManager | PresenceChannelManager {
         if (Utils.isPresenceChannel(channel)) {
             return this.presenceChannelManager;
         } else if (Utils.isEncryptedPrivateChannel(channel)) {
@@ -752,7 +789,7 @@ export class WsHandler {
     /**
      * Use the app manager to retrieve a valid app.
      */
-    protected checkForValidApp(ws: WebSocket): Promise<App|null> {
+    protected checkForValidApp(ws: WebSocket): Promise<App | null> {
         return this.server.appManager.findByKey(ws.appKey);
     }
 
