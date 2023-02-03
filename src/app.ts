@@ -1,6 +1,6 @@
-import { HttpResponse } from 'uWebSockets.js';
-import { Lambda } from 'aws-sdk';
-import { Server } from './server';
+import {HttpResponse} from 'uWebSockets.js';
+import {Lambda} from 'aws-sdk';
+import {Server} from './server';
 
 const Pusher = require('pusher');
 const pusherUtil = require('pusher/lib/util');
@@ -9,26 +9,29 @@ export interface AppInterface {
     id: string;
     key: string;
     secret: string;
-    maxConnections: string|number;
+    maxConnections: string | number;
     enableClientMessages: boolean;
     enabled: boolean;
-    maxBackendEventsPerSecond?: string|number;
-    maxClientEventsPerSecond: string|number;
-    maxReadRequestsPerSecond?: string|number;
+    maxBackendEventsPerSecond?: string | number;
+    maxClientEventsPerSecond: string | number;
+    maxReadRequestsPerSecond?: string | number;
     webhooks?: WebhookInterface[];
-    maxPresenceMembersPerChannel?: string|number;
-    maxPresenceMemberSizeInKb?: string|number;
+    maxPresenceMembersPerChannel?: string | number;
+    maxPresenceMemberSizeInKb?: string | number;
     maxChannelNameLength?: number;
-    maxEventChannelsAtOnce?: string|number;
-    maxEventNameLength?: string|number;
-    maxEventPayloadInKb?: string|number;
-    maxEventBatchSize?: string|number;
+    maxEventChannelsAtOnce?: string | number;
+    maxEventNameLength?: string | number;
+    maxEventPayloadInKb?: string | number;
+    maxEventBatchSize?: string | number;
     enableUserAuthentication?: boolean;
     hasClientEventWebhooks?: boolean;
     hasChannelOccupiedWebhooks?: boolean;
     hasChannelVacatedWebhooks?: boolean;
     hasMemberAddedWebhooks?: boolean;
     hasMemberRemovedWebhooks?: boolean;
+    enableSubscriptionCountEvent?: boolean;
+    startBatchingCount?: number;
+    batchTimeout?: number;
 }
 
 export interface WebhookInterface {
@@ -68,7 +71,7 @@ export class App implements AppInterface {
     /**
      * @type {number}
      */
-    public maxConnections: string|number;
+    public maxConnections: string | number;
 
     /**
      * @type {boolean}
@@ -83,17 +86,17 @@ export class App implements AppInterface {
     /**
      * @type {number}
      */
-    public maxBackendEventsPerSecond: string|number;
+    public maxBackendEventsPerSecond: string | number;
 
     /**
      * @type {number}
      */
-    public maxClientEventsPerSecond: string|number;
+    public maxClientEventsPerSecond: string | number;
 
     /**
      * @type {number}
      */
-    public maxReadRequestsPerSecond: string|number;
+    public maxReadRequestsPerSecond: string | number;
 
     /**
      * @type {WebhookInterface[]}
@@ -103,12 +106,12 @@ export class App implements AppInterface {
     /**
      * @type {string|number}
      */
-    public maxPresenceMembersPerChannel: string|number;
+    public maxPresenceMembersPerChannel: string | number;
 
     /**
      * @type {string|number}
      */
-    public maxPresenceMemberSizeInKb: string|number;
+    public maxPresenceMemberSizeInKb: string | number;
 
     /**
      * @type {number}
@@ -118,22 +121,22 @@ export class App implements AppInterface {
     /**
      * @type {string|number}
      */
-    public maxEventChannelsAtOnce: string|number;
+    public maxEventChannelsAtOnce: string | number;
 
     /**
      * @type {string|number}
      */
-    public maxEventNameLength: string|number;
+    public maxEventNameLength: string | number;
 
     /**
      * @type {string|number}
      */
-    public maxEventPayloadInKb: string|number;
+    public maxEventPayloadInKb: string | number;
 
     /**
      * @type {string|number}
      */
-    public maxEventBatchSize: string|number;
+    public maxEventBatchSize: string | number;
 
     /**
      * @type {boolean}
@@ -164,6 +167,21 @@ export class App implements AppInterface {
      * @type {boolean}
      */
     public hasMemberRemovedWebhooks = false;
+
+    /**
+     * @type {boolean}
+     */
+    public enableSubscriptionCountEvent = false;
+
+    /**
+     * @type {number}
+     */
+    public startBatchingCount = 100;
+
+    /**
+     * @type {number}
+     */
+    public batchTimeout = 30000;
 
     /**
      * @type {boolean}
@@ -199,6 +217,10 @@ export class App implements AppInterface {
         this.maxEventPayloadInKb = parseFloat(this.extractFromPassedKeys(initialApp, ['maxEventPayloadInKb', 'MaxEventPayloadInKb', 'max_event_payload_in_kb'], server.options.eventLimits.maxPayloadInKb));
         this.maxEventBatchSize = parseInt(this.extractFromPassedKeys(initialApp, ['maxEventBatchSize', 'MaxEventBatchSize', 'max_event_batch_size'], server.options.eventLimits.maxBatchSize));
         this.enableUserAuthentication = this.extractFromPassedKeys(initialApp, ['enableUserAuthentication', 'EnableUserAuthentication', 'enable_user_authentication'], false);
+        this.enableSubscriptionCountEvent = this.extractFromPassedKeys(initialApp, ['enableSubscriptionCount', 'enable_subscription_count'], false);
+        this.startBatchingCount = this.extractFromPassedKeys(initialApp, ['startBatchingCount', 'start_batching_count'], 100);
+        this.batchTimeout = this.extractFromPassedKeys(initialApp, ['batchTimeout', 'batch_timeout'], 30000);
+
 
         this.hasClientEventWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CLIENT_EVENT_WEBHOOK)).length > 0;
         this.hasChannelOccupiedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CHANNEL_OCCUPIED_WEBHOOK)).length > 0;
@@ -231,6 +253,9 @@ export class App implements AppInterface {
             maxEventPayloadInKb: this.maxEventPayloadInKb,
             maxEventBatchSize: this.maxEventBatchSize,
             enableUserAuthentication: this.enableUserAuthentication,
+            enableSubscriptionCountEvent: this.enableSubscriptionCountEvent,
+            startBatchingCount: this.startBatchingCount,
+            batchTimeout: this.batchTimeout,
         }
     }
 
