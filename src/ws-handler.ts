@@ -388,25 +388,29 @@ export class WsHandler {
                 this.server.webhookSender.sendChannelOccupied(ws.app, channel);
             }
 
+            if (ws.app.enableSubscriptionCountEvent) {
+                let subscriptionCountMessage = {
+                    event: 'pusher_internal:subscription_count',
+                    channel,
+                    data: JSON.stringify({
+                        subscription_count: response?.channelConnections ?? 1,
+                    })
+                };
+
+                this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+            }
+
             // For non-presence channels, end with subscription succeeded.
             if (!(channelManager instanceof PresenceChannelManager)) {
                 let broadcastMessage = {
                     event: 'pusher_internal:subscription_succeeded',
                     channel,
+                    data: JSON.stringify({
+                        subscription_count: response?.channelConnections ?? 1,
+                    })
                 };
 
                 ws.sendJson(broadcastMessage);
-
-                if (ws.app.enableSubscriptionCountEvent) {
-                    let subscriptionCountMessage = {
-                        event: 'pusher_internal:subscription_count',
-                        channel,
-                        subscription_count: ws.app.getChannelSockets(channel).length,
-                    };
-
-                    ws.sendJson(subscriptionCountMessage);
-                }
-
 
                 if (Utils.isCachingChannel(channel)) {
                     this.sendMissedCacheIfExists(ws, channel);
@@ -529,10 +533,12 @@ export class WsHandler {
                 let subscriptionCountMessage = {
                     event: 'pusher_internal:subscription_count',
                     channel,
-                    subscription_count: ws.app.getChannelSockets(channel).length,
+                    data: JSON.stringify({
+                        subscription_count: response?.remainingConnections ?? 1,
+                    })
                 };
 
-                ws.sendJson(subscriptionCountMessage);
+                this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
             }
 
             return;
