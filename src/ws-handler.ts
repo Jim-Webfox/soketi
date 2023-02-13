@@ -12,6 +12,7 @@ import {PusherMessage, uWebSocketMessage} from './message';
 import {Server} from './server';
 import {Utils} from './utils';
 import {WebSocket} from 'uWebSockets.js';
+import {clearTimeout} from "timers";
 
 const ab2str = require('arraybuffer-to-string');
 const Pusher = require('pusher');
@@ -398,43 +399,38 @@ export class WsHandler {
                 this.server.webhookSender.sendChannelOccupied(ws.app, channel);
             }
 
+            //If more connections that startBatchingCount are left, wait for the batchTimeout to send the subscription_count event
+            //allowing us to send less events for connections that are joining
+            //other wise send the event immediately
             if (ws.app.enableSubscriptionCountEvent) {
-
-                if (!(channel in this.channelTimestamps)) {
-
-                    if (response?.channelConnections > 100) {
-                        this.channelTimestamps[channel] = setTimeout(() => {
-
-                            const userCount = this.server.adapter.getChannelSocketsCount(ws.app.id, channel);
-
+                if (response.channelConnections >= ws.app.startBatchingCount) {
+                    clearTimeout(this.channelTimestamps[channel]);
+                    this.channelTimestamps[channel] = setTimeout(() => {
+                        this.server.adapter.getChannelSocketsCount(ws.app.id, channel).then((count) => {
                             let subscriptionCountMessage = {
                                 event: 'pusher_internal:subscription_count',
                                 channel,
                                 data: JSON.stringify({
-                                    subscription_count: userCount,
-                                })
+                                    subscription_count: count,
+                                }),
                             };
 
                             this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
 
                             delete this.channelTimestamps[channel];
-
-                        }, 30000)
-                    }
-
-
+                        });
+                    }, ws.app.batchTimeout);
+                } else {
                     let subscriptionCountMessage = {
                         event: 'pusher_internal:subscription_count',
                         channel,
                         data: JSON.stringify({
                             subscription_count: response?.channelConnections ?? 1,
-                        })
+                        }),
                     };
 
                     this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
                 }
-
-
             }
 
             // For non-presence channels, end with subscription succeeded.
@@ -524,6 +520,42 @@ export class WsHandler {
             let member = ws.presence.get(channel);
 
             if (response.left) {
+
+                //If more connections that startBatchingCount are left, wait for the batchTimeout to send the subscription_count event
+                //allowing us to send less events for connections that are leaving
+                //other wise send the event immediately
+                if (ws.app.enableSubscriptionCountEvent) {
+                    if (response.remainingConnections >= ws.app.startBatchingCount) {
+                        clearTimeout(this.channelTimestamps[channel]);
+                        this.channelTimestamps[channel] = setTimeout(() => {
+                            this.server.adapter.getChannelSocketsCount(ws.app.id, channel).then((count) => {
+                                let subscriptionCountMessage = {
+                                    event: 'pusher_internal:subscription_count',
+                                    channel,
+                                    data: JSON.stringify({
+                                        subscription_count: count,
+                                    }),
+                                };
+
+                                this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+
+                                delete this.channelTimestamps[channel];
+                            });
+                        }, ws.app.batchTimeout);
+                    } else {
+                        let subscriptionCountMessage = {
+                            event: 'pusher_internal:subscription_count',
+                            channel,
+                            data: JSON.stringify({
+                                subscription_count: response?.remainingConnections ?? 1,
+                            }),
+                        };
+
+                        this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+                    }
+                }
+
+
                 // Send presence channel-speific events and delete specific data.
                 // This can happen only if the user is connected to the presence channel.
                 if (channelManager instanceof PresenceChannelManager && ws.presence.has(channel)) {
