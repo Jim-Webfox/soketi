@@ -29,7 +29,7 @@ export interface AppInterface {
     hasChannelVacatedWebhooks?: boolean;
     hasMemberAddedWebhooks?: boolean;
     hasMemberRemovedWebhooks?: boolean;
-    enableSubscriptionCountEvent?: boolean;
+    enableSubscriptionCount?: boolean;
     startBatchingCount?: number;
     batchTimeout?: number;
 }
@@ -171,7 +171,7 @@ export class App implements AppInterface {
     /**
      * @type {boolean}
      */
-    public enableSubscriptionCountEvent = false;
+    public enableSubscriptionCount;
 
     /**
      * @type {number}
@@ -253,7 +253,7 @@ export class App implements AppInterface {
             maxEventPayloadInKb: this.maxEventPayloadInKb,
             maxEventBatchSize: this.maxEventBatchSize,
             enableUserAuthentication: this.enableUserAuthentication,
-            enableSubscriptionCountEvent: this.enableSubscriptionCountEvent,
+            enableSubscriptionCount: this.enableSubscriptionCount,
             startBatchingCount: this.startBatchingCount,
             batchTimeout: this.batchTimeout,
         }

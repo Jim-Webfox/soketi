@@ -402,7 +402,8 @@ export class WsHandler {
             //If more connections that startBatchingCount are left, wait for the batchTimeout to send the subscription_count event
             //allowing us to send less events for connections that are joining
             //other wise send the event immediately
-            if (ws.app.enableSubscriptionCountEvent) {
+            console.log(ws.app.enableSubscriptionCount,'++++++++++++++++++++++++++++++++++++++++++++++++++');
+            if (ws.app.enableSubscriptionCount) {
                 if (response.channelConnections >= ws.app.startBatchingCount) {
                     clearTimeout(this.channelTimestamps[channel]);
                     this.channelTimestamps[channel] = setTimeout(() => {
@@ -524,7 +525,7 @@ export class WsHandler {
                 //If more connections that startBatchingCount are left, wait for the batchTimeout to send the subscription_count event
                 //allowing us to send less events for connections that are leaving
                 //other wise send the event immediately
-                if (ws.app.enableSubscriptionCountEvent) {
+                if (ws.app.enableSubscriptionCount) {
                     if (response.remainingConnections >= ws.app.startBatchingCount) {
                         clearTimeout(this.channelTimestamps[channel]);
                         this.channelTimestamps[channel] = setTimeout(() => {
@@ -598,7 +599,7 @@ export class WsHandler {
             //     channel,
             // }));
 
-            if (ws.app.enableSubscriptionCountEvent) {
+            if (ws.app.enableSubscriptionCount) {
                 let subscriptionCountMessage = {
                     event: 'pusher_internal:subscription_count',
                     channel,
