@@ -36,10 +36,10 @@ describe('subscription count tests', () => {
             let channelName = Utils.randomChannelName();
             let updates = 1;
 
-            const channel = johnClient.subscribe(channelName);
-            const channel2 = aliceClient.subscribe(channelName);
+            const johnChannel = johnClient.subscribe(channelName);
+            const aliceChannel = aliceClient.subscribe(channelName);
 
-            channel.bind_global((event, data) => {
+            johnChannel.bind_global((event, data) => {
                 if (event === 'pusher:subscription_count') {
                     expect(data.subscription_count).toBe(updates);
                     updates++;
@@ -51,7 +51,7 @@ describe('subscription count tests', () => {
                 }
             });
 
-            channel2.bind_global((event, data) => {
+            aliceChannel.bind_global((event, data) => {
                 if (event === 'pusher:subscription_count') {
                     expect(data.subscription_count).toBe(updates);
                 }
