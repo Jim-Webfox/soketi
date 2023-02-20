@@ -402,7 +402,6 @@ export class WsHandler {
             //If more connections that startBatchingCount are left, wait for the batchTimeout to send the subscription_count event
             //allowing us to send less events for connections that are joining
             //other wise send the event immediately
-            console.log(ws.app.enableSubscriptionCount,'++++++++++++++++++++++++++++++++++++++++++++++++++');
             if (ws.app.enableSubscriptionCount) {
                 if (response.channelConnections >= ws.app.startBatchingCount) {
                     clearTimeout(this.channelTimestamps[channel]);
