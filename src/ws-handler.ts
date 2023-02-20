@@ -12,7 +12,7 @@ import {PusherMessage, uWebSocketMessage} from './message';
 import {Server} from './server';
 import {Utils} from './utils';
 import {WebSocket} from 'uWebSockets.js';
-import {clearTimeout} from "timers";
+import {clearTimeout} from 'timers';
 
 const ab2str = require('arraybuffer-to-string');
 const Pusher = require('pusher');
@@ -84,7 +84,7 @@ export class WsHandler {
             } catch (e) {
                 //
             }
-        }
+        };
 
         ws.id = this.generateSocketId();
         ws.subscribedChannels = new Set();
@@ -415,7 +415,7 @@ export class WsHandler {
                                 }),
                             };
 
-                            this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+                            this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage));
 
                             delete this.channelTimestamps[channel];
                         });
@@ -429,7 +429,7 @@ export class WsHandler {
                         }),
                     };
 
-                    this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+                    this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage));
                 }
             }
 
@@ -440,7 +440,7 @@ export class WsHandler {
                     channel,
                     data: JSON.stringify({
                         subscription_count: response?.channelConnections ?? 1,
-                    })
+                    }),
                 };
 
                 ws.sendJson(broadcastMessage);
@@ -537,7 +537,7 @@ export class WsHandler {
                                     }),
                                 };
 
-                                this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+                                this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage));
 
                                 delete this.channelTimestamps[channel];
                             });
@@ -551,7 +551,7 @@ export class WsHandler {
                             }),
                         };
 
-                        this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
+                        this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage));
                     }
                 }
 
@@ -604,7 +604,7 @@ export class WsHandler {
                     channel,
                     data: JSON.stringify({
                         subscription_count: response?.remainingConnections ?? 1,
-                    })
+                    }),
                 };
 
                 this.server.adapter.send(ws.app.id, channel, JSON.stringify(subscriptionCountMessage), ws.id);
@@ -629,7 +629,7 @@ export class WsHandler {
             ws.app && ws.user ? this.server.adapter.removeUser(ws) : new Promise<void>(resolve => resolve()),
         ]).then(() => {
             return;
-        })
+        });
     }
 
     /**
@@ -869,7 +869,7 @@ export class WsHandler {
             let token = new Pusher.Token(ws.app.key, ws.app.secret);
 
             resolve(
-                ws.app.key + ':' + token.sign(decodedString)
+                ws.app.key + ':' + token.sign(decodedString),
             );
         });
     }

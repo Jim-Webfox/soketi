@@ -1,7 +1,7 @@
-import { Server } from './../src/server';
-import { Utils } from './utils';
+import {Server} from './../src/server';
+import {Utils} from './utils';
 
-describe('public channel test', () => {
+describe('subscription count tests', () => {
     beforeEach(() => {
         jest.resetModules();
 
@@ -12,29 +12,85 @@ describe('public channel test', () => {
         return Utils.flushServers();
     });
 
-    test('recieves subscription count event', done => {
-        Utils.newServer({}, (server: Server) => {
+    test('receives subscription count event', done => {
+        Utils.newServer({
+            'appManager.array.apps.0.enableSubscriptionCount': true,
+        }, (server: Server) => {
             let client = Utils.newClient();
-            let backend = Utils.newBackend();
             let channelName = Utils.randomChannelName();
-
-            client.connection.bind('connected', () => {
-                let channel = client.subscribe(channelName);
-
-                channel.bind('greeting', e => {
-                    expect(e.message).toBe('hello');
-                    expect(e.weirdVariable).toBe('abc/d');
-                    client.disconnect();
-                    done();
-                });
-
-                channel.bind('pusher_internal:subscription_succeeded', () => {
-                    backend.trigger(channelName, 'greeting', { message: 'hello', weirdVariable: 'abc/d' })
-                        .catch(error => {
-                            throw new Error(error);
-                        });
-                });
+            const channel = client.subscribe(channelName);
+            channel.bind('pusher:subscription_count', (data) => {
+                expect(data.subscription_count).toBe(1);
+                client.disconnect();
+                done();
             });
+        });
+    });
+
+    test('handles subscription_count updates', done => {
+        Utils.newServer({
+            'appManager.array.apps.0.enableSubscriptionCount': true,
+        }, (server: Server) => {
+            let johnClient = Utils.newClient();
+            let aliceClient = Utils.newClient();
+            let channelName = Utils.randomChannelName();
+            let updates = 1;
+
+            const channel = johnClient.subscribe(channelName);
+            const channel2 = aliceClient.subscribe(channelName);
+
+            channel.bind_global((event, data) => {
+                if (event === 'pusher:subscription_count') {
+                    expect(data.subscription_count).toBe(updates);
+                    updates++;
+                }
+                if (updates === 3) {
+                    johnClient.disconnect();
+                    aliceClient.disconnect();
+                    done();
+                }
+            });
+
+            channel2.bind_global((event, data) => {
+                if (event === 'pusher:subscription_count') {
+                    expect(data.subscription_count).toBe(updates);
+                }
+            });
+
+        });
+    });
+
+    test('subscription_count batching', done => {
+        Utils.newServer({
+            'appManager.array.apps.0.enableSubscriptionCount': true,
+            'appManager.array.apps.0.batchTimeout': 10000,
+        }, (server: Server) => {
+            //add 100 connections
+            let clients = [];
+            for (let i = 0; i < 100; i++) {
+                clients.push(Utils.newClient());
+            }
+            //subscribe to a channel
+            let channelName = Utils.randomChannelName();
+            //subscribe all clients to the channel
+            clients.forEach((client) => {
+                client.subscribe(channelName);
+            } );
+
+            let client = Utils.newClient();
+            let timeBeforeSubscribe = Date.now();
+            const channel = client.subscribe(channelName);
+
+            channel.bind_global((event, data) => {
+                if (event === 'pusher:subscription_count') {
+                    expect(data.subscription_count).toBe(101);
+                    expect(Date.now() - timeBeforeSubscribe).toBeGreaterThan(10000);
+                    done();
+                }
+            });
+
+
+
         });
     });
 
